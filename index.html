@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Famili 100 - Sistem Komputer Kelas VIII</title>
+    <!-- PeerJS CDN untuk koneksi multiplayer via Link -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b132b;
+            --panel-bg: #1c2541;
+            --accent-yellow: #ffc8dd;
+            --gold: #ffb703;
+            --neon-blue: #4cc9f0;
+            --card-blue: #3a86ff;
+            --text-light: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial Black', 'Segoe UI', Tahoma, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--panel-bg);
+            border: 4px solid var(--gold);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(255, 183, 3, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px dashed var(--gold);
+            padding-bottom: 10px;
+        }
+
+        h1 {
+            color: var(--gold);
+            font-size: 2.2rem;
+            text-shadow: 3px 3px #000;
+            letter-spacing: 2px;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .btn {
+            background: linear-gradient(180deg, #ffb703, #fb8500);
+            color: #000;
+            border: 2px solid #fff;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 15px var(--gold);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(180deg, #4cc9f0, #4361ee);
+            color: #fff;
+        }
+
+        /* Board Famili 100 */
+        .question-box {
+            background: #000;
+            border: 3px solid var(--neon-blue);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            color: var(--neon-blue);
+            font-size: 1.2rem;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .board-item {
+            background: linear-gradient(180deg, #1d3557, #457b9d);
+            border: 2px solid #fff;
+            border-radius: 8px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: var(--gold);
+            position: relative;
+            perspective: 1000px;
+        }
+
+        .board-item.revealed {
+            background: linear-gradient(180deg, #38b000, #007200);
+            color: #fff;
+            justify-content: space-between;
+            padding: 0 15px;
+        }
+
+        /* Input & Controls */
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid var(--neon-blue);
+            background: #000;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            background: #000;
+            padding: 10px;
+            border-radius: 10px;
+            border: 2px solid var(--gold);
+        }
+
+        .score-box {
+            text-align: center;
+        }
+
+        .score-val {
+            color: var(--gold);
+            font-size: 1.8rem;
+        }
+
+        .strikes {
+            color: #e63946;
+            font-size: 2rem;
+            text-align: center;
+            letter-spacing: 5px;
+            height: 35px;
+        }
+
+        .link-share-box {
+            background: #000;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--neon-blue);
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: var(--neon-blue);
+        }
+
+        @media (max-width: 600px) {
+            .board-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <header>
+        <h1>FAMILI 100 INFORMATIKA</h1>
+        <p style="font-size: 0.85rem; color: var(--neon-blue);">Materi: Sistem Komputer Kelas VIII SMP</p>
+    </header>
+
+    <!-- SCREEN 1: LOBI / PILIHAN MODE -->
+    <div id="screen-lobby" class="screen active">
+        <button class="btn" onclick="startHost()">BUAT LOBI PERTANDINGAN (HOST / GURU)</button>
+        <div style="text-align: center; margin: 10px 0; color: #888;">— ATAU —</div>
+        <p style="text-align: center; font-size: 0.9rem;">Masuk menggunakan Link dari Host, atau masukkan Kode ID Lobi di bawah ini:</p>
+        <div class="input-group">
+            <input type="text" id="join-id-input" placeholder="Masukkan Kode ID Lobi...">
+            <button class="btn btn-secondary" onclick="joinLobby()">GABUNG</button>
+        </div>
+    </div>
+
+    <!-- SCREEN 2: WAITING LOBBY (HOST) -->
+    <div id="screen-waiting" class="screen">
+        <h2>LOBI BERHASIL DIBUAT!</h2>
+        <p>Bagikan link di bawah ini ke siswa / pemain lain:</p>
+        <div class="link-share-box" id="share-link-display">Memuat link...</div>
+        <button class="btn btn-secondary" onclick="copyShareLink()">SALIN LINK PERTANDINGAN</button>
+        <p style="margin-top: 15px; color: var(--gold);" id="connection-status">Menunggu pemain lain bergabung...</p>
+        <button class="btn" id="btn-start-game" style="display:none;" onclick="hostStartGame()">MULAI PERMAINAN SEKARANG</button>
+    </div>
+
+    <!-- SCREEN 3: ARENA GAMEPLAY -->
+    <div id="screen-game" class="screen">
+        <div class="score-board">
+            <div class="score-box">
+                <div style="font-size: 0.8rem;">TOTAL SKOR</div>
+                <div class="score-val" id="total-score">0</div>
+            </div>
+            <div class="score-box">
+                <div style="font-size: 0.8rem;">SOAL</div>
+                <div class="score-val" id="round-num">1/5</div>
+            </div>
+        </div>
+
+        <div class="strikes" id="strike-display"></div>
+
+        <div class="question-box" id="question-text">
+            Memuat pertanyaan...
+        </div>
+
+        <div class="board-grid" id="board-grid">
+            <!-- Papan survei diisi oleh JS -->
+        </div>
+
+        <div class="input-group" id="player-input-area">
+            <input type="text" id="answer-input" placeholder="Ketik jawaban survei di sini..." autocomplete="off">
+            <button class="btn" onclick="submitAnswer()">JAWAB</button>
+        </div>
+        <p id="turn-indicator" style="text-align: center; font-size: 0.9rem; color: var(--gold);"></p>
+    </div>
+</div>
+
+<script>
+    /* DATA SOAL SURVEI FAMILI 100 SISTEM KOMPUTER (KELAS VIII) */
+    const surveyData = [
+        {
+            question: "Sebutkan komponen fisik Hardware (Perangkat Keras) utama pada Komputer!",
+            answers: [
+                { text: "CPU", pts: 35, keywords: ["cpu", "prosesor", "processor"] },
+                { text: "RAM", pts: 25, keywords: ["ram", "memori"] },
+                { text: "MOTHERBOARD", pts: 20, keywords: ["motherboard", "mobo", "papan induk"] },
+                { text: "HARDDISK / SSD", pts: 12, keywords: ["ssd", "harddisk", "hdd", "penyimpanan"] },
+                { text: "POWER SUPPLY", pts: 8, keywords: ["power supply", "psu"] }
+            ]
+        },
+        {
+            question: "Sebutkan perangkat keras yang termasuk Perangkat INPUT (Masukan)!",
+            answers: [
+                { text: "KEYBOARD", pts: 40, keywords: ["keyboard", "papan ketik"] },
+                { text: "MOUSE", pts: 30, keywords: ["mouse", "tetikus"] },
+                { text: "SCANNER", pts: 15, keywords: ["scanner", "pindai"] },
+                { text: "MICROPHONE", pts: 10, keywords: ["microphone", "mic", "mikrofon"] },
+                { text: "WEBCAM", pts: 5, keywords: ["webcam", "kamera"] }
+            ]
+        },
+        {
+            question: "Sebutkan contoh Sistem Operasi (Operating System / Software Utama)!",
+            answers: [
+                { text: "WINDOWS", pts: 45, keywords: ["windows"] },
+                { text: "ANDROID", pts: 25, keywords: ["android"] },
+                { text: "LINUX", pts: 15, keywords: ["linux"] },
+                { text: "MACOS", pts: 10, keywords: ["macos", "mac os", "mac"] },
+                { text: "IOS", pts: 5, keywords: ["ios"] }
+            ]
+        },
+        {
+            question: "Sebutkan jenis Perangkat OUTPUT (Keluaran) pada sistem komputer!",
+            answers: [
+                { text: "MONITOR", pts: 45, keywords: ["monitor", "layar"] },
+                { text: "PRINTER", pts: 30, keywords: ["printer", "pencetak"] },
+                { text: "SPEAKER", pts: 15, keywords: ["speaker", "pengeras suara"] },
+                { text: "PROYEKTOR", pts: 10, keywords: ["proyektor", "projector"] }
+            ]
+        },
+        {
+            question: "Sebutkan peran atau profesi yang termasuk Brainware (Pengguna Komputer)!",
+            answers: [
+                { text: "PROGRAMMER", pts: 40, keywords: ["programmer", "pemrogram"] },
+                { text: "USER / PENGGUNA", pts: 25, keywords: ["user", "pengguna", "operator"] },
+                { text: "TEKNISI", pts: 20, keywords: ["teknisi", "technician"] },
+                { text: "SYSTEM ANALYST", pts: 15, keywords: ["analis", "system analyst"] }
+            ]
+        }
+    ];
+
+    /* GAME STATE MANAGEMENT & WEBRTC */
+    let peer = null;
+    let conn = null;
+    let isHost = false;
+    let currentRound = 0;
+    let totalScore = 0;
+    let strikes = 0;
+    let revealedAnswers = [];
+
+    // Cek Parameter URL saat dibuka (Apakah dibuka via Link)
+    window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const joinId = urlParams.get('join');
+        if (joinId) {
+            document.getElementById('join-id-input').value = joinId;
+            joinLobbyWithId(joinId);
+        }
+    };
+
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    }
+
+    /* HOST LOBBY CREATION */
+    function startHost() {
+        isHost = true;
+        peer = new Peer();
+
+        peer.on('open', (id) => {
+            const shareUrl = `${window.location.origin}${window.location.pathname}?join=${id}`;
+            document.getElementById('share-link-display').innerText = shareUrl;
+            showScreen('screen-waiting');
+        });
+
+        peer.on('connection', (connection) => {
+            conn = connection;
+            setupConnectionListeners();
+            document.getElementById('connection-status').innerText = "Pemain lain telah bergabung!";
+            document.getElementById('btn-start-game').style.display = "inline-block";
+        });
+    }
+
+    function copyShareLink() {
+        const linkText = document.getElementById('share-link-display').innerText;
+        navigator.clipboard.writeText(linkText);
+        alert("Link berhasil disalin! Kirimkan ke siswa/perangkat lain.");
+    }
+
+    /* JOIN LOBBY */
+    function joinLobby() {
+        const joinId = document.getElementById('join-id-input').value.trim();
+        if (!joinId) return alert("Masukkan Kode ID Lobi terlebih dahulu!");
+        joinLobbyWithId(joinId);
+    }
+
+    function joinLobbyWithId(joinId) {
+        isHost = false;
+        peer = new Peer();
+
+        peer.on('open', () => {
+            conn = peer.connect(joinId);
+            setupConnectionListeners();
+        });
+    }
+
+    function setupConnectionListeners() {
+        conn.on('open', () => {
+            if (!isHost) {
+                showScreen('screen-game');
+                document.getElementById('turn-indicator').innerText = "Terhubung dengan Host! Menunggu permainan dimulai...";
+            }
+        });
+
+        conn.on('data', (data) => {
+            handleIncomingData(data);
+        });
+    }
+
+    /* WEBRTC DATA SYNC */
+    function sendSync(type, payload) {
+        if (conn && conn.open) {
+            conn.send({ type, payload });
+        }
+    }
+
+    function handleIncomingData(data) {
+        if (data.type === 'START_GAME') {
+            showScreen('screen-game');
+            loadRound(data.payload.round);
+        } else if (data.type === 'SUBMIT_ANSWER') {
+            if (isHost) processAnswer(data.payload);
+        } else if (data.type === 'UPDATE_STATE') {
+            applyGameState(data.payload);
+        }
+    }
+
+    /* GAME LOGIC */
+    function hostStartGame() {
+        currentRound = 0;
+        totalScore = 0;
+        initRound(currentRound);
+        sendSync('START_GAME', { round: currentRound });
+        showScreen('screen-game');
+    }
+
+    function initRound(roundIdx) {
+        strikes = 0;
+        revealedAnswers = new Array(surveyData[roundIdx].answers.length).fill(false);
+        broadcastState();
+    }
+
+    function loadRound(roundIdx) {
+        currentRound = roundIdx;
+        renderBoard();
+    }
+
+    function broadcastState() {
+        const state = {
+            currentRound,
+            totalScore,
+            strikes,
+            revealedAnswers
+        };
+        applyGameState(state);
+        if (isHost) sendSync('UPDATE_STATE', state);
+    }
+
+    function applyGameState(state) {
+        currentRound = state.currentRound;
+        totalScore = state.totalScore;
+        strikes = state.strikes;
+        revealedAnswers = state.revealedAnswers;
+
+        document.getElementById('total-score').innerText = totalScore;
+        document.getElementById('round-num').innerText = `${currentRound + 1}/${surveyData.length}`;
+        
+        let strikeText = "";
+        for (let i = 0; i < strikes; i++) strikeText += "❌ ";
+        document.getElementById('strike-display').innerText = strikeText;
+
+        renderBoard();
+    }
+
+    function renderBoard() {
+        const data = surveyData[currentRound];
+        document.getElementById('question-text').innerText = data.question;
+
+        const grid = document.getElementById('board-grid');
+        grid.innerHTML = "";
+
+        data.answers.forEach((ans, idx) => {
+            const item = document.createElement('div');
+            item.className = "board-item" + (revealedAnswers[idx] ? " revealed" : "");
+
+            if (revealedAnswers[idx]) {
+                item.innerHTML = `<span>${idx + 1}. ${ans.text}</span><span>${ans.pts}</span>`;
+            } else {
+                item.innerHTML = `<span>${idx + 1}</span>`;
+            }
+            grid.appendChild(item);
+        });
+    }
+
+    function submitAnswer() {
+        const inputEl = document.getElementById('answer-input');
+        const text = inputEl.value.trim().toLowerCase();
+        if (!text) return;
+
+        inputEl.value = "";
+
+        if (isHost) {
+            processAnswer(text);
+        } else {
+            sendSync('SUBMIT_ANSWER', text);
+        }
+    }
+
+    function processAnswer(userAnswer) {
+        const data = surveyData[currentRound];
+        let matchIndex = -1;
+
+        data.answers.forEach((ans, idx) => {
+            if (!revealedAnswers[idx]) {
+                if (ans.keywords.some(kw => userAnswer.includes(kw))) {
+                    matchIndex = idx;
+                }
+            }
+        });
+
+        if (matchIndex !== -1) {
+            revealedAnswers[matchIndex] = true;
+            totalScore += data.answers[matchIndex].pts;
+        } else {
+            strikes++;
+        }
+
+        // Cek apakah babak selesai
+        const allRevealed = revealedAnswers.every(v => v);
+        if (allRevealed || strikes >= 3) {
+            setTimeout(() => {
+                if (currentRound + 1 < surveyData.length) {
+                    currentRound++;
+                    initRound(currentRound);
+                } else {
+                    alert(`PERMAINAN SELESAI!\nTotal Skor Akhir: ${totalScore}`);
+                }
+            }, 2000);
+        }
+
+        broadcastState();
+    }
+</script>
+</body>
+</html>
